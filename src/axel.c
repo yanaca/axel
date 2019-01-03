@@ -83,18 +83,14 @@ axel_new(conf_t *conf, int count, const void *url)
 		pthread_mutex_init(&axel->conn[i].lock, NULL);
 
 	if (axel->conf->max_speed > 0) {
-		if ((float)axel->conf->max_speed / axel->conf->buffer_size <
-		    0.5) {
+		if ((float)axel->conf->max_speed / axel->conf->buffer_size < 0.5) {
 			if (axel->conf->verbose >= 2)
-				axel_message(axel,
-					     _("Buffer resized for this speed."));
+				axel_message(axel, _("Buffer resized for this speed."));
 			axel->conf->buffer_size = axel->conf->max_speed;
 		}
-		delay = (int)((float)1000000000 / axel->conf->max_speed *
-			      axel->conf->buffer_size *
-			      axel->conf->num_connections);
+		delay = (int)((float)1000000000 / axel->conf->max_speed * axel->conf->buffer_size * axel->conf->num_connections);
 
-		axel->delay_time.tv_sec = delay / 1000000000;
+		axel->delay_time.tv_sec = delay / 1000000000; //用于控制匀速下载的sleeptime。 n个连接，每个链接buff_size，一次请求拉回的数据能够匀速放n * buff_size / max_speed 秒
 		axel->delay_time.tv_nsec = delay % 1000000000;
 	}
 	if (buffer == NULL) {
@@ -231,8 +227,7 @@ axel_open(axel_t *axel)
 	/* Check whether server knows about RESTart and switch back to
 	   single connection download if necessary */
 	if (!axel->conn[0].supported) {
-		axel_message(axel, _("Server unsupported, "
-				     "starting from scratch with one connection."));
+		axel_message(axel, _("Server unsupported, starting from scratch with one connection."));
 		axel->conf->num_connections = 1;
 		void *new_conn = realloc(axel->conn, sizeof(conn_t));
 		if (!new_conn)
@@ -244,27 +239,22 @@ axel_open(axel_t *axel)
 		int old_format = 0;
 		off_t stsize = lseek(fd, 0, SEEK_END);
 		lseek(fd, 0, SEEK_SET);
-
-		nread = read(fd, &axel->conf->num_connections,
-			     sizeof(axel->conf->num_connections));
+		//从st文件中读出num_connections数
+		nread = read(fd, &axel->conf->num_connections, sizeof(axel->conf->num_connections));
 		if (nread != sizeof(axel->conf->num_connections)) {
-			printf(_("%s.st: Error, truncated state file\n"),
-			       axel->filename);
+			printf(_("%s.st: Error, truncated state file\n"), axel->filename);
 			close(fd);
 			return 0;
 		}
 
 		if (axel->conf->num_connections < 1) {
-			fprintf(stderr,
-				_("Bogus number of connections stored in state file\n"));
+			fprintf(stderr, _("Bogus number of connections stored in state file\n"));
 			close(fd);
 			return 0;
 		}
 
-		if (stsize < (sizeof(axel->conf->num_connections) +
-			      sizeof(axel->bytes_done) +
-			      2 * axel->conf->num_connections *
-			      sizeof(axel->conn[0].currentbyte))) {
+		//.st文件结构： axel->conf->num_connections + axel->bytes_done + axel->conf->num_connections * axel->conn[i].currentbyte ;如果不是old_format的话,则 还会 + axel->conf->num_connections * axel->conn[i].lastbyte
+		if (stsize < (sizeof(axel->conf->num_connections) + sizeof(axel->bytes_done) + 2 * axel->conf->num_connections * sizeof(axel->conn[0].currentbyte))) {
 			/* FIXME this might be wrong, the file may have been
 			 * truncated, we need another way to check. */
 #ifdef DEBUG
@@ -273,8 +263,7 @@ axel_open(axel_t *axel)
 			old_format = 1;
 		}
 
-		void *new_conn = realloc(axel->conn, sizeof(conn_t) *
-					 axel->conf->num_connections);
+		void *new_conn = realloc(axel->conn, sizeof(conn_t) * axel->conf->num_connections);
 		if (!new_conn) {
 			close(fd);
 			return 0;
@@ -290,19 +279,15 @@ axel_open(axel_t *axel)
 		nread = read(fd, &axel->bytes_done, sizeof(axel->bytes_done));
 		assert(nread == sizeof(axel->bytes_done));
 		for (i = 0; i < axel->conf->num_connections; i++) {
-			nread = read(fd, &axel->conn[i].currentbyte,
-				     sizeof(axel->conn[i].currentbyte));
+			nread = read(fd, &axel->conn[i].currentbyte, sizeof(axel->conn[i].currentbyte));
 			assert(nread == sizeof(axel->conn[i].currentbyte));
 			if (!old_format) {
-				nread = read(fd, &axel->conn[i].lastbyte,
-					     sizeof(axel->conn[i].lastbyte));
+				nread = read(fd, &axel->conn[i].lastbyte, sizeof(axel->conn[i].lastbyte));
 				assert(nread == sizeof(axel->conn[i].lastbyte));
 			}
 		}
 
-		axel_message(axel,
-			     _("State file found: %lld bytes downloaded, %lld to go."),
-			     axel->bytes_done, axel->size - axel->bytes_done);
+		axel_message(axel, _("State file found: %lld bytes downloaded, %lld to go."), axel->bytes_done, axel->size - axel->bytes_done);
 
 		close(fd);
 
@@ -316,8 +301,7 @@ axel_open(axel_t *axel)
 	if (axel->outfd == -1) {
 		axel_divide(axel);
 
-		if ((axel->outfd =
-		     open(axel->filename, O_CREAT | O_WRONLY, 0666)) == -1) {
+		if ((axel->outfd = open(axel->filename, O_CREAT | O_WRONLY, 0666)) == -1) {
 			axel_message(axel, _("Error opening local file"));
 			return 0;
 		}
@@ -325,27 +309,21 @@ axel_open(axel_t *axel)
 		/* And check whether the filesystem can handle seeks to
 		   past-EOF areas.. Speeds things up. :) AFAIK this
 		   should just not happen: */
-		if (lseek(axel->outfd, axel->size, SEEK_SET) == -1 &&
-		    axel->conf->num_connections > 1) {
+		if (lseek(axel->outfd, axel->size, SEEK_SET) == -1 && axel->conf->num_connections > 1) {
 			/* But if the OS/fs does not allow to seek behind
 			   EOF, we have to fill the file with zeroes before
 			   starting. Slow.. */
-			axel_message(axel,
-				     _("Crappy filesystem/OS.. Working around. :-("));
+			axel_message(axel, _("Crappy filesystem/OS.. Working around. :-("));
 			lseek(axel->outfd, 0, SEEK_SET);
 			memset(buffer, 0, axel->conf->buffer_size);
 			long long int j = axel->size;
 			while (j > 0) {
 				ssize_t nwrite;
 
-				if ((nwrite =
-				     write(axel->outfd, buffer,
-					   min(j,
-					       axel->conf->buffer_size))) < 0) {
+				if ((nwrite = write(axel->outfd, buffer, min(j, axel->conf->buffer_size))) < 0) {
 					if (errno == EINTR || errno == EAGAIN)
 						continue;
-					axel_message(axel,
-						     _("Error creating local file"));
+					axel_message(axel, _("Error creating local file"));
 					return 0;
 				}
 				j -= nwrite;
@@ -839,9 +817,7 @@ axel_divide(axel_t *axel)
 	axel->conn[0].lastbyte = axel->size / axel->conf->num_connections - 1;
 	for (i = 1; i < axel->conf->num_connections; i++) {
 #ifdef DEBUG
-		printf(_("Downloading %lld-%lld using conn. %i\n"),
-		       axel->conn[i - 1].currentbyte,
-		       axel->conn[i - 1].lastbyte, i - 1);
+		printf(_("Downloading %lld-%lld using conn. %i\n"), axel->conn[i - 1].currentbyte, axel->conn[i - 1].lastbyte, i - 1);
 #endif
 		axel->conn[i].currentbyte = axel->conn[i - 1].lastbyte + 1;
 		axel->conn[i].lastbyte =

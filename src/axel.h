@@ -106,15 +106,15 @@ typedef message_t if_t;
 #define max(a, b)		((a) > (b) ? (a) : (b))
 
 typedef struct {
-	conn_t *conn;
-	conf_t *conf;
-	char filename[MAX_STRING];
-	double start_time;
+	conn_t *conn;	//conn_t数组,保存了所有连接的信息
+	conf_t *conf; 	//conf_t数组,保存了所有连接的配置
+	char filename[MAX_STRING];	//文件名,多线程同事写一个文件(lseek+write)加锁
+	double start_time;	//
 	int next_state, finish_time;
 	long long bytes_done, start_byte, size;
 	int bytes_per_second;
 	struct timespec delay_time;
-	int outfd;
+	int outfd; //输出文件的fd
 	int ready;
 	message_t *message, *last_message;
 	url_t *url;

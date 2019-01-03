@@ -50,6 +50,7 @@
 
 int parse_interfaces(conf_t *conf, char *s);
 
+//return 0 fail, >0 succ.
 static int
 axel_fscanf(FILE *fp, const char *format, ...)
 {
@@ -84,6 +85,7 @@ parse_protocol(conf_t *conf, const char *value)
 	return 1;
 }
 
+//解析配置文件，赋值给conf_t
 int
 conf_loadfile(conf_t *conf, char *file)
 {
@@ -103,10 +105,13 @@ conf_loadfile(conf_t *conf, char *file)
 
 		*s = 0;
 
+		//读取100字符,过滤空行和注释的行(#打头)
 		if (!(ret = axel_fscanf(fp, "%100[^\n#]s", s)))
 			break;
+		//过滤空行
 		if (!(ret = axel_fscanf(fp, "%*[^\n]s")))
 			break;
+		//
 		if ((fgetc(fp) != '\n') && !feof(fp)) {	/* Skip newline */
 			fprintf(stderr, "Expected newline\n");
 			goto error;
@@ -319,7 +324,7 @@ parse_interfaces(conf_t *conf, char *s)
 			s++;
 		for (s2 = s; *s2 != ' ' && *s2 != '\t' && *s2; s2++) ;
 		*s2 = 0;
-		if (*s < '0' || *s > '9')
+		if (*s < '0' || *s > '9') //TODO 网卡不会以数字开头吗???
 			get_if_ip(s, iface->text);
 		else
 			strcpy(iface->text, s);

@@ -64,7 +64,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 	const int portstr_len = 10;
 	char portstr[portstr_len];
 	struct addrinfo ai_hints;
-	struct addrinfo *gai_results, *gai_result;
+	struct addrinfo *gai_results /*保存host集合*/, *gai_result /*用于遍历*/;
 	int ret;
 	int sock_fd = -1;
 
@@ -83,6 +83,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 	ai_hints.ai_flags = AI_ADDRCONFIG;
 	ai_hints.ai_protocol = 0;
 
+	//域名解析,将结果填充到gai_results
 	ret = getaddrinfo(hostname, portstr, &ai_hints, &gai_results);
 	if (ret != 0) {
 		tcp_error(message, hostname, port, gai_strerror(ret));
@@ -91,8 +92,8 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 
 	gai_result = gai_results;
 	sock_fd = -1;
+	//遍历gai_results找到一个可用的ip，创建socket，绑定本地地址
 	while ((sock_fd == -1) && (gai_result != NULL)) {
-
 		sock_fd = socket(gai_result->ai_family,
 				 gai_result->ai_socktype,
 				 gai_result->ai_protocol);
@@ -117,12 +118,16 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 			if (sock_fd != -1) {
 				struct timeval tout = { .tv_sec  = io_timeout };
 				/* Set O_NONBLOCK so we can timeout */
+				//由于connect函数默认是阻塞的,所以要等连接建立成功或者失败以后才会返回。这里至少要一个RTT时间。即要收到服务端的ACK以后才返回的。 RTT可能受到网络波动会变得很大，所以这里选择使用异步connect。
+				//如果把socket设置成非阻塞的,ret=-1,errno=EINPROGRESS表示socket正在建立，但是还没完成。如果ret=0表示socket已经建立完成了。
 				if (io_timeout)
 					fcntl(sock_fd, F_SETFL, O_NONBLOCK);
 				ret = connect(sock_fd, gai_result->ai_addr,
 					      gai_result->ai_addrlen);
 				/* Wait for the connection */
-				if (ret == -1 && errno == EINPROGRESS) {
+				if (ret == -1 && errno == EINPROGRESS) { //socket正在建立。由于异步connect无法设置超时时间，所以要借助select。为它设置超时时间并且select的结果来判断连接是否成功建立。
+														 //如果select返回正值则通过getsockopt在SOL_SOCKET级别上读取SO_ERROR选项的取值来判断连接是否成功。 如果select返回零值或-1，则分别表示超时或出错。
+													  	 //如果返回负值表示socket未建立。 参考 http://developerweb.net/viewtopic.php?id=3196
 					fd_set fdset;
 					FD_ZERO(&fdset);
 					FD_SET(sock_fd, &fdset);
@@ -135,6 +140,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 					sock_fd = -1;
 					gai_result = gai_result->ai_next;
 				} else {
+					//连接已经建立，重新设置会阻塞模式
 					fcntl(sock_fd, F_SETFL, 0);
 				}
 			}
@@ -147,6 +153,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 		tcp_error(message, hostname, port, strerror(errno));
 		return -1;
 	}
+	//TODO 学习sslconnect
 #ifdef HAVE_SSL
 	if (secure) {
 		tcp->ssl = ssl_connect(sock_fd, hostname, message);
@@ -160,6 +167,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 
 	/* Set I/O timeout */
 	struct timeval tout = { .tv_sec  = io_timeout };
+	//对socket设置数据发送和数据接收的超时时间。这俩api仅对数据收发的api生效。设置后若超时，返回EAGAIN或者EWOULDBLOCK; 	https://blog.csdn.net/jasonliuvip/article/details/23567843
 	setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout));
 	setsockopt(sock_fd, SOL_SOCKET, SO_SNDTIMEO, &tout, sizeof(tout));
 
@@ -204,7 +212,7 @@ tcp_close(tcp_t *tcp)
 }
 
 int
-get_if_ip(char *iface, char *ip)
+get_if_ip(char *iface, char *ip) //通过ioctl api获取interface对应的ip地址
 {
 	struct ifreq ifr;
 	int ret, fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);

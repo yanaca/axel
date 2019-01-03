@@ -93,7 +93,7 @@ static char string[MAX_STRING + 3];
 int
 main(int argc, char *argv[])
 {
-	char fn[MAX_STRING] = "";
+	char fn[MAX_STRING] = ""; //file out put
 	int do_search = 0;
 	search_t *search;
 	conf_t conf[1];
@@ -125,21 +125,21 @@ main(int argc, char *argv[])
 			break;
 
 		switch (option) {
-		case 'U':
+		case 'U': //覆盖配置文件的UA
 			strncpy(conf->user_agent, optarg,
 				sizeof(conf->user_agent) - 1);
 			break;
-		case 'H':
+		case 'H': //追加header
 			strncpy(conf->add_header[cur_head++], optarg,
 				sizeof(conf->add_header[cur_head - 1]) - 1);
 			break;
-		case 's':
+		case 's': //设置最大速度
 			if (!sscanf(optarg, "%i", &conf->max_speed)) {
 				print_help();
 				goto free_conf;
 			}
 			break;
-		case 'n':
+		case 'n': //设置最多连接数
 			if (!sscanf(optarg, "%hu", &conf->num_connections)) {
 				print_help();
 				goto free_conf;
@@ -179,7 +179,7 @@ main(int argc, char *argv[])
 		case 'c':
 			conf->no_clobber = 1;
 			break;
-		case 'N':
+		case 'N': //关闭proxy
 			*conf->http_proxy = 0;
 			break;
 		case 'h':
@@ -259,6 +259,7 @@ main(int argc, char *argv[])
 	}
 
 	printf(_("Initializing download: %s\n"), s);
+	//TODO search???
 	if (do_search) {
 		search = malloc(sizeof(search_t) * (conf->search_amount + 1));
 		if (!search)

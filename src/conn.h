@@ -71,26 +71,27 @@
 #define PROTO_DEFAULT_PORT     PROTO_HTTP_PORT
 
 typedef struct {
-	conf_t *conf;
+	conf_t *conf;	//连接的配置,一个连接只有一个配置
 
-	int proto;
-	int port;
-	int proxy;
-	char host[MAX_STRING];
-	char dir[MAX_STRING];
-	char file[MAX_STRING];
-	char user[MAX_STRING];
-	char pass[MAX_STRING];
-	char output_filename[MAX_STRING];
+	int proto;		//协议类型
+	int port;		//端口
+	int proxy;		//是否使用代理
+	//whole url is ->  proto://host:port@user:pass/dir/file?querystring
+	char host[MAX_STRING]; 	//host
+	char dir[MAX_STRING];	//uri
+	char file[MAX_STRING];	//文件名
+	char user[MAX_STRING];	//用户名
+	char pass[MAX_STRING];	//密码
+	char output_filename[MAX_STRING]; //输出文件
 
-	ftp_t ftp[1];
-	http_t http[1];
+	ftp_t ftp[1];	//ftp连接信息
+	http_t http[1];	//tcp连接信息
 	long long int size;	/* File size, not 'connection size'.. */
 	long long int currentbyte;
 	long long int lastbyte;
-	tcp_t *tcp;
+	tcp_t *tcp; //tcp连接信息
 	bool enabled;
-	bool supported;
+	bool supported; //服务端是否支持多链接下载，如果http resp中包含"Content-Range:即支持
 	int last_transfer;
 	char *message;
 	char *local_if;

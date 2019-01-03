@@ -96,7 +96,7 @@ http_connect(http_t *conn, int proto, char *proxy, char *host, int port,
 	conn->port = port;
 	conn->proto = proto;
 
-	if (proxy != NULL) {
+	if (proxy != NULL) { //如果设置了proxy的话，覆盖连接建立相关的变量。
 		if (*proxy != 0) {
 			sprintf(conn->host, "%s:%i", host, port);
 			if (!conn_set(tconn, proxy)) {
@@ -116,6 +116,7 @@ http_connect(http_t *conn, int proto, char *proxy, char *host, int port,
 		}
 	}
 
+	//建立tcp链接,fd保存在conn->tcp里面
 	if (tcp_connect(&conn->tcp, host, port, PROTO_IS_SECURE(proto),
 			conn->local_if, conn->headers, io_timeout) == -1)
 		return 0;
@@ -274,6 +275,7 @@ http_header(const http_t *conn, const char *header)
 	return NULL;
 }
 
+//用来指明发送给接收方的消息主体的大小
 long long int
 http_size(http_t *conn)
 {
@@ -287,6 +289,8 @@ http_size(http_t *conn)
 	return j;
 }
 
+//Content-Range: bytes 200-1000/67589  http resp header中Content-Range表示返回的数据包在整个文件中的位置. start=200, end=1000, 文件总大小67589
+//从resp header中获取文件总大小
 long long int
 http_size_from_range(http_t *conn)
 {
@@ -306,6 +310,7 @@ http_size_from_range(http_t *conn)
 	return j;
 }
 
+//从http resp header  Content-Disposition 中取出 文件名 // https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Content-Disposition
 void
 http_filename(const http_t *conn, char *filename)
 {

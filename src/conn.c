@@ -48,6 +48,7 @@ char string[MAX_STRING];
 
 /**
  * Convert an URL to a conn_t structure.
+ * 填充conn中的链接相关配置,例如协议，host，端口，账号密码等
  */
 int
 conn_set(conn_t *conn, const char *set_url)
@@ -190,18 +191,19 @@ conn_disconnect(conn_t *conn)
 	conn->enabled = false;
 }
 
+//建立tcp链接,计算authen token
 int
 conn_init(conn_t *conn)
 {
 	char *proxy = conn->conf->http_proxy, *host = conn->conf->no_proxy;
 	int i;
 
-	if (*conn->conf->http_proxy == 0) {
+	if (*conn->conf->http_proxy == 0) { //proxy配置和cmd中配置为空时,
 		proxy = NULL;
 	} else if (*conn->conf->no_proxy != 0) {
 		for (i = 0;; i++)
 			if (conn->conf->no_proxy[i] == 0) {
-				if (strstr(conn->host, host) != NULL)
+				if (strstr(conn->host, host) != NULL) //判断host是否存在于no_proxy数组中
 					proxy = NULL;
 				host = &conn->conf->no_proxy[i + 1];
 				if (conn->conf->no_proxy[i + 1] == 0)
@@ -211,6 +213,7 @@ conn_init(conn_t *conn)
 
 	conn->proxy = proxy != NULL;
 
+	//根据协议类型建立相应的链接
 	if (PROTO_IS_FTP(conn->proto) && !conn->proxy) {
 		conn->ftp->local_if = conn->local_if;
 		conn->ftp->ftp_mode = FTP_PASSIVE;
@@ -243,6 +246,7 @@ conn_init(conn_t *conn)
 	return 1;
 }
 
+/* 加上一些用于控制请求内容的header */
 int
 conn_setup(conn_t *conn)
 {
@@ -269,7 +273,7 @@ conn_setup(conn_t *conn)
 		snprintf(s, sizeof(s), "%s%s", conn->dir, conn->file);
 		conn->http->firstbyte = conn->currentbyte;
 		conn->http->lastbyte = conn->lastbyte;
-		http_get(conn->http, s);
+		http_get(conn->http, s); //加上获取的资源名,资源长度,认证token等header
 		http_addheader(conn->http, "User-Agent: %s",
 			       conn->conf->user_agent);
 		for (i = 0; i < conn->conf->add_header_count; i++)
