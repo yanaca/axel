@@ -43,23 +43,23 @@
 #define AXEL_CONF_H
 
 typedef struct {
-	char default_filename[MAX_STRING]; //Ä¬ÈÏÎÄ¼şÃû, ÀıÈçÏÂÔØwww.baidu.com/index/ ÕâÖÖÊ±ºòĞèÒªÄ¬ÈÏÎÄ¼şÃû
-	char http_proxy[MAX_STRING]; //proxyÊı×é; Èç¹ûHTTP_PROXY»·¾³±äÁ¿ÓĞÉèÖÃµÄ»°Ôò²»ĞèÒªÔÙÉèÖÃÕâ¸öÅäÖÃ
-	char no_proxy[MAX_STRING]; //²»×ß´úÀíµÄhost;ÅäÖÃÎÄ¼şÖĞÓÃ¶ººÅ·Ö¸ô,host²»ĞèÒª¾«È·Æ¥Åä
-	uint16_t num_connections; //Á¬½ÓÊı;²»½¨ÒéÉèÖÃÌ«¸ß,ÀíÂÛÉÏ4¸ö¼´¿É
-	int strip_cgi_parameters; //ÊÇ·ñ½«CGI²ÎÊı±£ÁôÔÚ±¾µØÎÄ¼şÃûÖĞ,Ä¬ÈÏ1
-	int save_state_interval; //±£´æstÎÄ¼şµÄÆµÂÊ,Ä¬ÈÏÃ¿¸ô10s±£´æ.Èç¹ûÉèÖÃÎª0Ôò²»±£´æ£»±£´æµÄÄ¿µÄÊÇÎªÁËcrashĞø´«
-	int connection_timeout; //socketÁ¬½Ó³¬Ê±Ê±¼ä,Ä¬ÈÏ45s¡£²ÉÓÃµÄÊÇ·Ç×èÈûÌ×½Ó×Ö+select¿ØÖÆ³¬Ê±Ä£Ê½
-	int reconnect_delay; //ÖØÁ¬¼ä¸ô
-	int max_redirect; //×î¶àÖØ¶¨Ïò´ÎÊı,Ä¬ÈÏ20
-	int buffer_size; //´ÓÒ»¸öconnÖĞµ¥´Î¶ÁÈ¡µÄ×î´ó×Ö½ÚÊı;bufferÉèÖÃ½ÏĞ¡Ê±ËÙÂÊ¿ØÖÆ»á½ÏÎª¾«È·µ«ÊÇ×÷Õß½¨ÒéÉèÖÃ´óÒ»Ğ©
-	int max_speed; //×î´óÏÂÔØËÙ¶È, Õı¸º5%µÄÆ«²î
-	int verbose; //ÊÇ·ñ´òÓ¡¸ü¶àĞÅÏ¢µ½¿ØÖÆÌ¨
-	int alternate_output; //Ä¬ÈÏÊÇÀàËÆwgetÄ£Ê½Êä³ö,Èç¹ûÉèÖÃÎª0ÔòÊ¹ÓÃscpÄ£Ê½Êä³ö
+	char default_filename[MAX_STRING]; //é»˜è®¤æ–‡ä»¶å, ä¾‹å¦‚ä¸‹è½½www.baidu.com/index/ è¿™ç§æ—¶å€™éœ€è¦é»˜è®¤æ–‡ä»¶å
+	char http_proxy[MAX_STRING]; //proxyæ•°ç»„; å¦‚æœHTTP_PROXYç¯å¢ƒå˜é‡æœ‰è®¾ç½®çš„è¯åˆ™ä¸éœ€è¦å†è®¾ç½®è¿™ä¸ªé…ç½®
+	char no_proxy[MAX_STRING]; //ä¸èµ°ä»£ç†çš„host;é…ç½®æ–‡ä»¶ä¸­ç”¨é€—å·åˆ†éš”,hostä¸éœ€è¦ç²¾ç¡®åŒ¹é…
+	uint16_t num_connections; //è¿æ¥æ•°;ä¸å»ºè®®è®¾ç½®å¤ªé«˜,ç†è®ºä¸Š4ä¸ªå³å¯
+	int strip_cgi_parameters; //æ˜¯å¦å°†CGIå‚æ•°ä¿ç•™åœ¨æœ¬åœ°æ–‡ä»¶åä¸­,é»˜è®¤1
+	int save_state_interval; //ä¿å­˜stæ–‡ä»¶çš„é¢‘ç‡,é»˜è®¤æ¯éš”10sä¿å­˜.å¦‚æœè®¾ç½®ä¸º0åˆ™ä¸ä¿å­˜ï¼›ä¿å­˜çš„ç›®çš„æ˜¯ä¸ºäº†crashç»­ä¼ 
+	int connection_timeout; //socketè¿æ¥è¶…æ—¶æ—¶é—´,é»˜è®¤45sã€‚é‡‡ç”¨çš„æ˜¯éé˜»å¡å¥—æ¥å­—+selectæ§åˆ¶è¶…æ—¶æ¨¡å¼
+	int reconnect_delay; //é‡è¿é—´éš”
+	int max_redirect; //æœ€å¤šé‡å®šå‘æ¬¡æ•°,é»˜è®¤20
+	int buffer_size; //ä»ä¸€ä¸ªconnä¸­å•æ¬¡è¯»å–çš„æœ€å¤§å­—èŠ‚æ•°;bufferè®¾ç½®è¾ƒå°æ—¶é€Ÿç‡æ§åˆ¶ä¼šè¾ƒä¸ºç²¾ç¡®ä½†æ˜¯ä½œè€…å»ºè®®è®¾ç½®å¤§ä¸€äº›
+	int max_speed; //æœ€å¤§ä¸‹è½½é€Ÿåº¦, æ­£è´Ÿ5%çš„åå·®
+	int verbose; //æ˜¯å¦æ‰“å°æ›´å¤šä¿¡æ¯åˆ°æ§åˆ¶å°
+	int alternate_output; //é»˜è®¤æ˜¯ç±»ä¼¼wgetæ¨¡å¼è¾“å‡º,å¦‚æœè®¾ç½®ä¸º0åˆ™ä½¿ç”¨scpæ¨¡å¼è¾“å‡º
 	int insecure;
-	int no_clobber; //outputÄ¿Â¼ÓĞÍ¬ÃûÏÂÔØÎÄ¼şÇÒÕÒ²»µ½stÎÄ¼şÊ±£¬no_clobberÎª1ÔòÌø¹ı±¾´ÎÏÂÔØ¡£·ñÔò»á×Ô¶¯ÏÂÔØ²¢±£´æÎª x.2ÀàËÆ¸ñÊ½µÄÎÄ¼ş
+	int no_clobber; //outputç›®å½•æœ‰åŒåä¸‹è½½æ–‡ä»¶ä¸”æ‰¾ä¸åˆ°stæ–‡ä»¶æ—¶ï¼Œno_clobberä¸º1åˆ™è·³è¿‡æœ¬æ¬¡ä¸‹è½½ã€‚å¦åˆ™ä¼šè‡ªåŠ¨ä¸‹è½½å¹¶ä¿å­˜ä¸º x.2ç±»ä¼¼æ ¼å¼çš„æ–‡ä»¶
 
-	if_t *interfaces; //Íø¿¨ÃûÊı×é,Èç¹ûÒ»¸ö»úÆ÷ÓĞ¶à¸öÍø¿¨,ÔòÖ§³ÖÁĞ³öÕâĞ©Íø¿¨,È»ºóÍ¨¹ı¶àÍø¿¨½øĞĞÏÂÔØ¡£·ñÔòÄ¬ÈÏÔò´ÓÂ·ÓÉ±íÖĞÄÃµÚÒ»¸öÆ¥ÅäµÄ±¾µØÍø¿¨ip¡£
+	if_t *interfaces; //ç½‘å¡åæ•°ç»„,å¦‚æœä¸€ä¸ªæœºå™¨æœ‰å¤šä¸ªç½‘å¡,åˆ™æ”¯æŒåˆ—å‡ºè¿™äº›ç½‘å¡,ç„¶åé€šè¿‡å¤šç½‘å¡è¿›è¡Œä¸‹è½½ã€‚å¦åˆ™é»˜è®¤åˆ™ä»è·¯ç”±è¡¨ä¸­æ‹¿ç¬¬ä¸€ä¸ªåŒ¹é…çš„æœ¬åœ°ç½‘å¡ipã€‚
 
 	sa_family_t ai_family;
 
@@ -68,10 +68,10 @@ typedef struct {
 	int search_amount;
 	int search_top;
 
-	unsigned io_timeout;
+	unsigned io_timeout; //å»ºç«‹tcpè¿æ¥æ—¶ï¼Œå¼‚æ­¥connectçš„è¶…æ—¶æ—¶é—´ï¼›å³è°ƒç”¨connect apiä»¥åselectä¸­è®¾ç½®çš„è¶…æ—¶ã€‚
 
-	int add_header_count; //headerÊıÁ¿
-	char add_header[MAX_ADD_HEADERS][MAX_STRING]; //header¶şÎ¬Êı×é
+	int add_header_count; //headeræ•°é‡
+	char add_header[MAX_ADD_HEADERS][MAX_STRING]; //headeräºŒç»´æ•°ç»„
 
 	char user_agent[MAX_STRING]; //ua
 } conf_t;

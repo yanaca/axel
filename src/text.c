@@ -108,6 +108,7 @@ main(int argc, char *argv[])
 	textdomain(PACKAGE);
 #endif
 
+	//åˆå§‹åŒ–é…ç½®ï¼Œé»˜è®¤ä»Žé…ç½®æ–‡ä»¶ä¸­è¯»å–
 	if (!conf_init(conf)) {
 		return 1;
 	}
@@ -125,21 +126,21 @@ main(int argc, char *argv[])
 			break;
 
 		switch (option) {
-		case 'U': //¸²¸ÇÅäÖÃÎÄ¼þµÄUA
+		case 'U': //è¦†ç›–é…ç½®æ–‡ä»¶çš„UA
 			strncpy(conf->user_agent, optarg,
 				sizeof(conf->user_agent) - 1);
 			break;
-		case 'H': //×·¼Óheader
+		case 'H': //è¿½åŠ header
 			strncpy(conf->add_header[cur_head++], optarg,
 				sizeof(conf->add_header[cur_head - 1]) - 1);
 			break;
-		case 's': //ÉèÖÃ×î´óËÙ¶È
+		case 's': //è®¾ç½®æœ€å¤§é€Ÿåº¦
 			if (!sscanf(optarg, "%i", &conf->max_speed)) {
 				print_help();
 				goto free_conf;
 			}
 			break;
-		case 'n': //ÉèÖÃ×î¶àÁ¬½ÓÊý
+		case 'n': //è®¾ç½®æœ€å¤šè¿žæŽ¥æ•°
 			if (!sscanf(optarg, "%hu", &conf->num_connections)) {
 				print_help();
 				goto free_conf;
@@ -179,7 +180,7 @@ main(int argc, char *argv[])
 		case 'c':
 			conf->no_clobber = 1;
 			break;
-		case 'N': //¹Ø±Õproxy
+		case 'N': //å…³é—­proxy
 			*conf->http_proxy = 0;
 			break;
 		case 'h':
@@ -299,21 +300,20 @@ main(int argc, char *argv[])
 			print_messages(axel);
 			goto close_axel;
 		}
-	} else if (argc - optind == 1) {
+	} else if (argc - optind == 1) { //å•é“¾æŽ¥
 		axel = axel_new(conf, 0, s);
 		if (!axel || axel->ready == -1) {
 			print_messages(axel);
 			goto close_axel;
 		}
-	} else {
+	} else { //å¤šé“¾æŽ¥
 		search = malloc(sizeof(search_t) * (argc - optind));
 		if (!search)
 			goto free_conf;
 
 		memset(search, 0, sizeof(search_t) * (argc - optind));
 		for (i = 0; i < (argc - optind); i++)
-			strncpy(search[i].url, argv[optind + i],
-				sizeof(search[i].url) - 1);
+			strncpy(search[i].url, argv[optind + i], sizeof(search[i].url) - 1);
 		axel = axel_new(conf, argc - optind, search);
 		free(search);
 		if (!axel || axel->ready == -1) {
@@ -322,27 +322,23 @@ main(int argc, char *argv[])
 		}
 	}
 	print_messages(axel);
-	if (s != argv[optind]) {
+	if (s != argv[optind]) { //æ¯æ¬¡è°ƒç”¨getopt() , optind å€¼ä¼š +1
 		free(s);
 	}
 
-	if (*fn) {
+	if (*fn) { //fnï¼šè¾“å‡ºç›®å½•
 		struct stat buf;
-
 		if (stat(fn, &buf) == 0) {
 			if (S_ISDIR(buf.st_mode)) {
 				size_t fnlen = strlen(fn);
 				size_t axelfnlen = strlen(axel->filename);
-
 				if (fnlen + 1 + axelfnlen + 1 > MAX_STRING) {
-					fprintf(stderr,
-						_("Filename too long!\n"));
+					fprintf(stderr, _("Filename too long!\n"));
 					goto close_axel;
 				}
 
 				fn[fnlen] = '/';
-				memcpy(fn + fnlen + 1, axel->filename,
-				       axelfnlen);
+				memcpy(fn + fnlen + 1, axel->filename, axelfnlen);
 				fn[fnlen + 1 + axelfnlen] = '\0';
 			}
 		}

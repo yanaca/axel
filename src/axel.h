@@ -106,21 +106,22 @@ typedef message_t if_t;
 #define max(a, b)		((a) > (b) ? (a) : (b))
 
 typedef struct {
-	conn_t *conn;	//conn_t����,�������������ӵ���Ϣ
-	conf_t *conf; 	//conf_t����,�������������ӵ�����
-	char filename[MAX_STRING];	//�ļ���,���߳�ͬ��дһ���ļ�(lseek+write)����
-	double start_time;	//
-	int next_state, finish_time;
-	long long bytes_done, start_byte, size;
-	int bytes_per_second;
+	conn_t *conn;	//conn_t数组,保存了所有连接的信息
+	conf_t *conf; 	//conf_t数组,保存了所有连接的配置
+	char filename[MAX_STRING];	//输出文件的文件名,多线程同事写一个文件(lseek+write)加锁
+	double start_time;	//开始时间
+	int next_state; //下一次记录state文件的时间
+	int finish_time; //按照当前下载速度计算出来的预计下载完成时间
+	long long bytes_done, start_byte, size; //已经下载的字节数,开始字节,总字节数
+	int bytes_per_second; //每秒下载的字节数
 	struct timespec delay_time;
-	int outfd; //����ļ���fd
-	int ready;
-	message_t *message, *last_message;
-	url_t *url;
+	int outfd; //输出文件的fd
+	int ready; //是否完成,0未完成,1已下载完成,-1出现异常下载中断
+	message_t *message, *last_message; //errmsg
+	url_t *url; //下载的url信息
 } axel_t;
 
-axel_t *axel_new(conf_t *conf, int count, const void *url);
+axel_t *axel_new(conf_t *conf, int count, const void *url); //会发起一次http调用将conn需要的信息都填补完整
 int axel_open(axel_t *axel);
 void axel_start(axel_t *axel);
 void axel_do(axel_t *axel);

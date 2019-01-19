@@ -58,7 +58,7 @@ static char *buffer = NULL;
 
 /* Create a new axel_t structure */
 axel_t *
-axel_new(conf_t *conf, int count, const void *url)
+axel_new(conf_t *conf, int count, const void *url) //count表示url数组中url的个数
 {
 	const search_t *res;
 	axel_t *axel;
@@ -90,7 +90,7 @@ axel_new(conf_t *conf, int count, const void *url)
 		}
 		delay = (int)((float)1000000000 / axel->conf->max_speed * axel->conf->buffer_size * axel->conf->num_connections);
 
-		axel->delay_time.tv_sec = delay / 1000000000; //���ڿ����������ص�sleeptime�� n�����ӣ�ÿ������buff_size��һ���������ص������ܹ����ٷ�n * buff_size / max_speed ��
+		axel->delay_time.tv_sec = delay / 1000000000; //用于控制匀速下载的sleeptime。 n个连接，每个链接buff_size，一次请求拉回的数据能够匀速放n * buff_size / max_speed 秒
 		axel->delay_time.tv_nsec = delay % 1000000000;
 	}
 	if (buffer == NULL) {
@@ -119,7 +119,7 @@ axel_new(conf_t *conf, int count, const void *url)
 		if (!u)
 			goto nomem;
 		axel->url = u;
-
+		//将入参中的url拷贝到axel中,这里是支持从多个url同时下载吗？
 		for (i = 0; i < count; i++) {
 			strncpy(u[i].text, res[i].url, sizeof(u[i].text) - 1);
 			u[i].next = &u[i + 1];
@@ -127,7 +127,7 @@ axel_new(conf_t *conf, int count, const void *url)
 		u[count - 1].next = u;
 	}
 
-	axel->conn[0].conf = axel->conf;
+	axel->conn[0].conf = axel->conf; //默认conn数组第一个元素的conf指向axel的conf
 	if (!conn_set(&axel->conn[0], axel->url->text)) {
 		axel_message(axel, _("Could not parse URL.\n"));
 		axel->ready = -1;
@@ -137,27 +137,23 @@ axel_new(conf_t *conf, int count, const void *url)
 	axel->conn[0].local_if = axel->conf->interfaces->text;
 	axel->conf->interfaces = axel->conf->interfaces->next;
 
-	strncpy(axel->filename, axel->conn[0].file, sizeof(axel->filename) - 1);
+	strncpy(axel->filename, axel->conn[0].file, sizeof(axel->filename) - 1); //取conn数组第一个元素的file名称作为axel的filename，这个filename会用来保存st文件
 	http_decode(axel->filename);
 
-	if ((s = strchr(axel->filename, '?')) != NULL &&
-	    axel->conf->strip_cgi_parameters)
+	if ((s = strchr(axel->filename, '?')) != NULL && axel->conf->strip_cgi_parameters)
 		*s = 0;		/* Get rid of CGI parameters */
 
-	if (*axel->filename == 0)	/* Index page == no fn */
-		strncpy(axel->filename, axel->conf->default_filename,
-			sizeof(axel->filename) - 1);
+	if (*axel->filename == 0)	/* Index page == no fn */ 	//如果filename字段为空的话,则用配置文件里面的default_filename。
+		strncpy(axel->filename, axel->conf->default_filename, sizeof(axel->filename) - 1);
 
 	if (axel->conf->no_clobber && access(axel->filename, F_OK) == 0) {
 		char stfile[MAX_STRING + 3];
 
 		sprintf(stfile, "%s.st", axel->filename);
 		if (access(stfile, F_OK) == 0) {
-			printf(_("Incomplete download found, ignoring "
-				 "no-clobber option\n"));
+			printf(_("Incomplete download found, ignoring no-clobber option\n"));
 		} else {
-			printf(_("File '%s' already there; not retrieving.\n"),
-			       axel->filename);
+			printf(_("File '%s' already there; not retrieving.\n"), axel->filename);
 			axel->ready = -1;
 			return axel;
 		}
@@ -172,7 +168,7 @@ axel_new(conf_t *conf, int count, const void *url)
 
 		/* This does more than just checking the file size, it all
 		 * depends on the protocol used. */
-		status = conn_info(&axel->conn[0]);
+		status = conn_info(&axel->conn[0]); //发送请求从resp的header中取出需要的信息,这里如果失败的话会有重试机制。
 		if (!status) {
 			axel_message(axel, axel->conn[0].message);
 			axel->ready = -1;
@@ -182,13 +178,12 @@ axel_new(conf_t *conf, int count, const void *url)
 				 * happen only once because the FTP protocol
 				 * can't redirect back to HTTP */
 
-	s = conn_url(axel->conn);
+	s = conn_url(axel->conn); //根据conn配置拼接出一个完整的url
 	strncpy(axel->url->text, s, sizeof(axel->url->text) - 1);
-	axel->size = axel->conn[0].size;
+	axel->size = axel->conn[0].size; //将获取到的size赋值给axel
 	if (axel->conf->verbose > 0) {
 		if (axel->size != LLONG_MAX) {
-			axel_message(axel, _("File size: %lld bytes"),
-				     axel->size);
+			axel_message(axel, _("File size: %lld bytes"), axel->size);
 		} else {
 			axel_message(axel, _("File size: unavailable"));
 		}
@@ -196,12 +191,10 @@ axel_new(conf_t *conf, int count, const void *url)
 
 	/* Wildcards in URL --> Get complete filename */
 	if (strchr(axel->filename, '*') || strchr(axel->filename, '?'))
-		strncpy(axel->filename, axel->conn[0].file,
-			sizeof(axel->filename) - 1);
+		strncpy(axel->filename, axel->conn[0].file, sizeof(axel->filename) - 1);
 
 	if (*axel->conn[0].output_filename != 0) {
-		strncpy(axel->filename, axel->conn[0].output_filename,
-			sizeof(axel->filename) - 1);
+		strncpy(axel->filename, axel->conn[0].output_filename, sizeof(axel->filename) - 1); //如果下载的文件命不为空的话，保存下载状态的st文件命也用它覆盖。
 	}
 
 	return axel;
@@ -226,20 +219,20 @@ axel_open(axel_t *axel)
 
 	/* Check whether server knows about RESTart and switch back to
 	   single connection download if necessary */
-	if (!axel->conn[0].supported) {
+	if (!axel->conn[0].supported) { //根据axel_new的返回值等信息进行判断~
 		axel_message(axel, _("Server unsupported, starting from scratch with one connection."));
 		axel->conf->num_connections = 1;
-		void *new_conn = realloc(axel->conn, sizeof(conn_t));
+		void *new_conn = realloc(axel->conn, sizeof(conn_t)); //原来可能按照n个连接进行分配了n个conn结构内存
 		if (!new_conn)
 			return 0;
 
 		axel->conn = new_conn;
-		axel_divide(axel);
+		axel_divide(axel); //为每个连接分配下载的数据段
 	} else if ((fd = open(buffer, O_RDONLY)) != -1) {
 		int old_format = 0;
 		off_t stsize = lseek(fd, 0, SEEK_END);
 		lseek(fd, 0, SEEK_SET);
-		//��st�ļ��ж���num_connections��
+		//从st文件中读出num_connections数
 		nread = read(fd, &axel->conf->num_connections, sizeof(axel->conf->num_connections));
 		if (nread != sizeof(axel->conf->num_connections)) {
 			printf(_("%s.st: Error, truncated state file\n"), axel->filename);
@@ -253,7 +246,8 @@ axel_open(axel_t *axel)
 			return 0;
 		}
 
-		//.st�ļ��ṹ�� axel->conf->num_connections + axel->bytes_done + axel->conf->num_connections * axel->conn[i].currentbyte ;�������old_format�Ļ�,�� ���� + axel->conf->num_connections * axel->conn[i].lastbyte
+		//.st文件结构： axel->conf->num_connections + axel->bytes_done + axel->conf->num_connections * axel->conn[i].currentbyte ;
+		// 如果不是old_format的话,则 还会 + axel->conf->num_connections * axel->conn[i].lastbyte
 		if (stsize < (sizeof(axel->conf->num_connections) + sizeof(axel->bytes_done) + 2 * axel->conf->num_connections * sizeof(axel->conn[0].currentbyte))) {
 			/* FIXME this might be wrong, the file may have been
 			 * truncated, we need another way to check. */
@@ -263,15 +257,14 @@ axel_open(axel_t *axel)
 			old_format = 1;
 		}
 
-		void *new_conn = realloc(axel->conn, sizeof(conn_t) * axel->conf->num_connections);
+		void *new_conn = realloc(axel->conn, sizeof(conn_t) * axel->conf->num_connections); //重新分配conn个数,因为初始化的个数可能和文件中读出的个数不一致
 		if (!new_conn) {
 			close(fd);
 			return 0;
 		}
 		axel->conn = new_conn;
 
-		memset(axel->conn + 1, 0,
-		       sizeof(conn_t) * (axel->conf->num_connections - 1));
+		memset(axel->conn + 1, 0, sizeof(conn_t) * (axel->conf->num_connections - 1));
 
 		if (old_format)
 			axel_divide(axel);
@@ -300,7 +293,7 @@ axel_open(axel_t *axel)
 	/* If outfd == -1 we have to start from scrath now */
 	if (axel->outfd == -1) {
 		axel_divide(axel);
-
+		//创建输出文件
 		if ((axel->outfd = open(axel->filename, O_CREAT | O_WRONLY, 0666)) == -1) {
 			axel_message(axel, _("Error opening local file"));
 			return 0;
@@ -309,6 +302,7 @@ axel_open(axel_t *axel)
 		/* And check whether the filesystem can handle seeks to
 		   past-EOF areas.. Speeds things up. :) AFAIK this
 		   should just not happen: */
+		//如果不支持lseek超过EOF，那就往文件中填充size个空字符
 		if (lseek(axel->outfd, axel->size, SEEK_SET) == -1 && axel->conf->num_connections > 1) {
 			/* But if the OS/fs does not allow to seek behind
 			   EOF, we have to fill the file with zeroes before
@@ -335,7 +329,7 @@ axel_open(axel_t *axel)
 }
 
 void
-reactivate_connection(axel_t *axel, int thread)
+reactivate_connection(axel_t *axel, int thread) //可以帮助其他连接下载未下载完的任务
 {
 	long long int max_remaining = 0;
 	int idx = -1;
@@ -376,7 +370,7 @@ axel_start(axel_t *axel)
 	url_ptr = axel->url;
 	for (i = 0; i < axel->conf->num_connections; i++) {
 		conn_set(&axel->conn[i], url_ptr->text);
-		url_ptr = url_ptr->next;
+		url_ptr = url_ptr->next;//支持开启多个线程同时下载多个文件
 		axel->conn[i].local_if = axel->conf->interfaces->text;
 		axel->conf->interfaces = axel->conf->interfaces->next;
 		axel->conn[i].conf = axel->conf;
@@ -403,9 +397,7 @@ axel_start(axel_t *axel)
 			}
 
 			axel->conn[i].state = true;
-			if (pthread_create
-			    (axel->conn[i].setup_thread, NULL, setup_thread,
-			     &axel->conn[i]) != 0) {
+			if (pthread_create (axel->conn[i].setup_thread, NULL, setup_thread, &axel->conn[i]) != 0) {
 				axel_message(axel, _("pthread error!!!"));
 				axel->ready = -1;
 			}
@@ -439,7 +431,7 @@ axel_do(axel_t *axel)
 	hifd = 0;
 	for (i = 0; i < axel->conf->num_connections; i++) {
 		/* skip connection if setup thread hasn't released the lock yet */
-		if (!pthread_mutex_trylock(&axel->conn[i].lock)) {
+		if (!pthread_mutex_trylock(&axel->conn[i].lock)) { //是否已经发送完http请求等待读数据；如果lock被释放，则意味着可以监听socket去读数据了。
 			if (axel->conn[i].enabled) {
 				FD_SET(axel->conn[i].tcp->fd, fds);
 				hifd = max(hifd, axel->conn[i].tcp->fd);
@@ -447,16 +439,15 @@ axel_do(axel_t *axel)
 			pthread_mutex_unlock(&axel->conn[i].lock);
 		}
 	}
-	if (hifd == 0) {
+
+	if (hifd == 0) { //暂时没有可以读的fd
 		/* No connections yet. Wait... */
 		if (axel_sleep(delay) < 0) {
-			axel_message(axel,
-				     _("Error while waiting for connection: %s"),
-				     strerror(errno));
+			axel_message(axel, _("Error while waiting for connection: %s"), strerror(errno));
 			axel->ready = -1;
 			return;
 		}
-		goto conn_check;
+		goto conn_check; //检查是否有连接异常关闭
 	}
 
 	timeval->tv_sec = 0;
@@ -478,22 +469,17 @@ axel_do(axel_t *axel)
 			goto next_conn;
 
 		if (!FD_ISSET(axel->conn[i].tcp->fd, fds)) {
-			time_t timeout = axel->conn[i].last_transfer +
-			    axel->conf->connection_timeout;
+			time_t timeout = axel->conn[i].last_transfer + axel->conf->connection_timeout;
 			if (gettime() > timeout) {
 				if (axel->conf->verbose)
-					axel_message(axel,
-						     _("Connection %i timed out"),
-						     i);
+					axel_message(axel, _("Connection %i timed out"), i);
 				conn_disconnect(&axel->conn[i]);
 			}
 			goto next_conn;
 		}
 
 		axel->conn[i].last_transfer = gettime();
-		size =
-		    tcp_read(axel->conn[i].tcp, buffer,
-			     axel->conf->buffer_size);
+		size = tcp_read(axel->conn[i].tcp, buffer, axel->conf->buffer_size); //每次从一个fd中读取一个buffer_size大小的数据
 		if (size == -1) {
 			if (axel->conf->verbose) {
 				axel_message(axel, _("Error on connection %i! "
@@ -509,30 +495,24 @@ axel_do(axel_t *axel)
 				if (axel->conn[i].currentbyte <
 				    axel->conn[i].lastbyte &&
 				    axel->size != LLONG_MAX) {
-					axel_message(axel,
-						     _("Connection %i unexpectedly closed"),
-						     i);
+					axel_message(axel, _("Connection %i unexpectedly closed"), i);
 				} else {
-					axel_message(axel,
-						     _("Connection %i finished"),
-						     i);
+					axel_message(axel, _("Connection %i finished"), i);
 				}
 			}
 			if (!axel->conn[0].supported) {
 				axel->ready = 1;
 			}
 			conn_disconnect(&axel->conn[i]);
-			reactivate_connection(axel, i);
+			reactivate_connection(axel, i); //当前连接已经下载完毕,去看看其他连接是否需要帮忙下载
 			goto next_conn;
 		}
 
 		/* remaining == Bytes to go */
-		remaining =
-		    axel->conn[i].lastbyte - axel->conn[i].currentbyte + 1;
+		remaining = axel->conn[i].lastbyte - axel->conn[i].currentbyte + 1;
 		if (remaining < size) {
 			if (axel->conf->verbose) {
-				axel_message(axel, _("Connection %i finished"),
-					     i);
+				axel_message(axel, _("Connection %i finished"), i);
 			}
 			conn_disconnect(&axel->conn[i]);
 			size = remaining;
@@ -563,15 +543,14 @@ axel_do(axel_t *axel)
 	url_ptr = axel->url;
 	for (i = 0; i < axel->conf->num_connections; i++) {
 		/* skip connection if setup thread hasn't released the lock yet */
-		if (pthread_mutex_trylock(&axel->conn[i].lock))
+		if (pthread_mutex_trylock(&axel->conn[i].lock)) //如果lock没有被释放那说明还在执行setup_thread
 			continue;
 
 		if (!axel->conn[i].enabled &&
-		    axel->conn[i].currentbyte < axel->conn[i].lastbyte) {
-			if (!axel->conn[i].state) {
+		    axel->conn[i].currentbyte < axel->conn[i].lastbyte) { //数据未下载完成连接就已经关闭
+			if (!axel->conn[i].state) { //setup已经执行完成
 				// Wait for termination of this thread
-				pthread_join(*(axel->conn[i].setup_thread),
-					     NULL);
+				pthread_join(*(axel->conn[i].setup_thread), NULL);
 
 				conn_set(&axel->conn[i], url_ptr->text);
 				url_ptr = url_ptr->next;
@@ -585,22 +564,17 @@ axel_do(axel_t *axel)
 						     axel->conn[i].local_if);
 
 				axel->conn[i].state = true;
-				if (pthread_create
-				    (axel->conn[i].setup_thread, NULL,
-				     setup_thread, &axel->conn[i]) == 0) {
+				if (pthread_create(axel->conn[i].setup_thread, NULL, setup_thread, &axel->conn[i]) == 0) { //重新启动异常中断的连接;这里不会重置currentByte等数据，实际是断点续传。
 					axel->conn[i].last_transfer = gettime();
 				} else {
-					axel_message(axel,
-						     _("pthread error!!!"));
+					axel_message(axel, _("pthread error!!!"));
 					axel->ready = -1;
 				}
-			} else {
-				if (gettime() > (axel->conn[i].last_transfer +
-						 axel->conf->reconnect_delay)) {
-					pthread_cancel(*axel->conn[i].setup_thread);
-					axel->conn[i].state = false;
-					pthread_join(*axel->conn[i].
-						     setup_thread, NULL);
+			} else { //setup未执行完成
+				if (gettime() > (axel->conn[i].last_transfer + axel->conf->reconnect_delay)) {
+					pthread_cancel(*axel->conn[i].setup_thread); //直接取消
+					axel->conn[i].state = false; //置为false等下一轮check会重启
+					pthread_join(*axel->conn[i].setup_thread, NULL);
 				}
 			}
 		}
@@ -608,38 +582,29 @@ axel_do(axel_t *axel)
 	}
 
 	/* Calculate current average speed and finish_time */
-	axel->bytes_per_second =
-	    (int)((double)(axel->bytes_done - axel->start_byte) /
-		  (gettime() - axel->start_time));
+	axel->bytes_per_second = (int)((double)(axel->bytes_done - axel->start_byte) / (gettime() - axel->start_time));
 	if (axel->bytes_per_second != 0)
-		axel->finish_time =
-		    (int)(axel->start_time +
-			  (double)(axel->size - axel->start_byte) /
-			  axel->bytes_per_second);
+		axel->finish_time = (int)(axel->start_time + (double)(axel->size - axel->start_byte) / axel->bytes_per_second);
 	else
 		axel->finish_time = INT_MAX;
 
 	/* Check speed. If too high, delay for some time to slow things
 	   down a bit. I think a 5% deviation should be acceptable. */
 	if (axel->conf->max_speed > 0) {
-		max_speed_ratio = (float)axel->bytes_per_second /
-		    axel->conf->max_speed;
+		max_speed_ratio = (float)axel->bytes_per_second / axel->conf->max_speed;
 		if (max_speed_ratio > 1.05)
 			axel->delay_time.tv_nsec += 10000000;
-		else if ((max_speed_ratio < 0.95) &&
-			 (axel->delay_time.tv_nsec >= 10000000))
+		else if ((max_speed_ratio < 0.95) && (axel->delay_time.tv_nsec >= 10000000))
 			axel->delay_time.tv_nsec -= 10000000;
-		else if ((max_speed_ratio < 0.95) &&
-			 (axel->delay_time.tv_sec > 0)) {
+		else if ((max_speed_ratio < 0.95) && (axel->delay_time.tv_sec > 0)) {
 			axel->delay_time.tv_sec--;
 			axel->delay_time.tv_nsec += 999000000;
 		} else
-		    if (((float)axel->bytes_per_second / axel->conf->max_speed <
-			 0.95)) {
+		    if (((float)axel->bytes_per_second / axel->conf->max_speed < 0.95)) {
 			axel->delay_time.tv_sec = 0;
 			axel->delay_time.tv_nsec = 0;
 		}
-		if (axel_sleep(axel->delay_time) < 0) {
+		if (axel_sleep(axel->delay_time) < 0) { //控制速度，做休眠
 			axel_message(axel,
 				     _("Error while enforcing throttling: %s"),
 				     strerror(errno));
@@ -812,7 +777,6 @@ static void
 axel_divide(axel_t *axel)
 {
 	int i;
-
 	axel->conn[0].currentbyte = 0;
 	axel->conn[0].lastbyte = axel->size / axel->conf->num_connections - 1;
 	for (i = 1; i < axel->conf->num_connections; i++) {
@@ -820,9 +784,7 @@ axel_divide(axel_t *axel)
 		printf(_("Downloading %lld-%lld using conn. %i\n"), axel->conn[i - 1].currentbyte, axel->conn[i - 1].lastbyte, i - 1);
 #endif
 		axel->conn[i].currentbyte = axel->conn[i - 1].lastbyte + 1;
-		axel->conn[i].lastbyte =
-		    axel->conn[i].currentbyte +
-		    axel->size / axel->conf->num_connections;
+		axel->conn[i].lastbyte = axel->conn[i].currentbyte + axel->size / axel->conf->num_connections;
 	}
 	axel->conn[axel->conf->num_connections - 1].lastbyte = axel->size - 1;
 #ifdef DEBUG

@@ -64,7 +64,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 	const int portstr_len = 10;
 	char portstr[portstr_len];
 	struct addrinfo ai_hints;
-	struct addrinfo *gai_results /*±£´æhost¼¯ºÏ*/, *gai_result /*ÓÃÓÚ±éÀú*/;
+	struct addrinfo *gai_results /*ä¿å­˜hosté›†åˆ*/, *gai_result /*ç”¨äºéå†*/;
 	int ret;
 	int sock_fd = -1;
 
@@ -72,7 +72,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 	if (tcp->ai_family == AF_INET && local_if && *local_if) {
 		local_addr.sin_family = AF_INET;
 		local_addr.sin_port = 0;
-		local_addr.sin_addr.s_addr = inet_addr(local_if);
+		local_addr.sin_addr.s_addr = inet_addr(local_if);//æœ¬åœ°ç½‘å¡
 	}
 
 	snprintf(portstr, portstr_len, "%d", port);
@@ -83,7 +83,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 	ai_hints.ai_flags = AI_ADDRCONFIG;
 	ai_hints.ai_protocol = 0;
 
-	//ÓòÃû½âÎö,½«½á¹ûÌî³äµ½gai_results
+	//åŸŸåè§£æ,å°†ç»“æœå¡«å……åˆ°gai_results
 	ret = getaddrinfo(hostname, portstr, &ai_hints, &gai_results);
 	if (ret != 0) {
 		tcp_error(message, hostname, port, gai_strerror(ret));
@@ -92,25 +92,17 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 
 	gai_result = gai_results;
 	sock_fd = -1;
-	//±éÀúgai_resultsÕÒµ½Ò»¸ö¿ÉÓÃµÄip£¬´´½¨socket£¬°ó¶¨±¾µØµØÖ·
+	//éå†gai_results
 	while ((sock_fd == -1) && (gai_result != NULL)) {
-		sock_fd = socket(gai_result->ai_family,
-				 gai_result->ai_socktype,
-				 gai_result->ai_protocol);
-
+		sock_fd = socket(gai_result->ai_family, gai_result->ai_socktype, gai_result->ai_protocol); //æŒ‰ç…§aiè§£æçš„ç»“æœåˆ›å»ºsocket
 		if (sock_fd != -1) {
-
 			if (gai_result->ai_family == AF_INET) {
 				if (local_if && *local_if) {
-					ret = bind(sock_fd,
-						   (struct sockaddr *)
-						   &local_addr,
-						   sizeof(local_addr));
+					ret = bind(sock_fd, (struct sockaddr *)&local_addr, sizeof(local_addr)); //å°†åˆ›å»ºå¥½çš„socketç»‘å®šä¸€ä¸ªæœ¬åœ°åœ°å€
 					if (ret == -1) {
 						close(sock_fd);
 						sock_fd = -1;
-						gai_result =
-						    gai_result->ai_next;
+						gai_result = gai_result->ai_next;
 					}
 				}
 			}
@@ -118,29 +110,26 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 			if (sock_fd != -1) {
 				struct timeval tout = { .tv_sec  = io_timeout };
 				/* Set O_NONBLOCK so we can timeout */
-				//ÓÉÓÚconnectº¯ÊıÄ¬ÈÏÊÇ×èÈûµÄ,ËùÒÔÒªµÈÁ¬½Ó½¨Á¢³É¹¦»òÕßÊ§°ÜÒÔºó²Å»á·µ»Ø¡£ÕâÀïÖÁÉÙÒªÒ»¸öRTTÊ±¼ä¡£¼´ÒªÊÕµ½·şÎñ¶ËµÄACKÒÔºó²Å·µ»ØµÄ¡£ RTT¿ÉÄÜÊÜµ½ÍøÂç²¨¶¯»á±äµÃºÜ´ó£¬ËùÒÔÕâÀïÑ¡ÔñÊ¹ÓÃÒì²½connect¡£
-				//Èç¹û°ÑsocketÉèÖÃ³É·Ç×èÈûµÄ,ret=-1,errno=EINPROGRESS±íÊ¾socketÕıÔÚ½¨Á¢£¬µ«ÊÇ»¹Ã»Íê³É¡£Èç¹ûret=0±íÊ¾socketÒÑ¾­½¨Á¢Íê³ÉÁË¡£
+				//ç”±äºconnectå‡½æ•°é»˜è®¤æ˜¯é˜»å¡çš„,æ‰€ä»¥è¦ç­‰è¿æ¥å»ºç«‹æˆåŠŸæˆ–è€…å¤±è´¥ä»¥åæ‰ä¼šè¿”å›ã€‚è¿™é‡Œè‡³å°‘è¦ä¸€ä¸ªRTTæ—¶é—´ã€‚å³è¦æ”¶åˆ°æœåŠ¡ç«¯çš„ACKä»¥åæ‰è¿”å›çš„ã€‚ RTTå¯èƒ½å—åˆ°ç½‘ç»œæ³¢åŠ¨ä¼šå˜å¾—å¾ˆå¤§ï¼Œæ‰€ä»¥è¿™é‡Œé€‰æ‹©ä½¿ç”¨å¼‚æ­¥connectã€‚
+				//å¦‚æœæŠŠsocketè®¾ç½®æˆéé˜»å¡çš„,ret=-1,errno=EINPROGRESSè¡¨ç¤ºsocketæ­£åœ¨å»ºç«‹ï¼Œä½†æ˜¯è¿˜æ²¡å®Œæˆã€‚å¦‚æœret=0è¡¨ç¤ºsocketå·²ç»å»ºç«‹å®Œæˆäº†ã€‚
 				if (io_timeout)
 					fcntl(sock_fd, F_SETFL, O_NONBLOCK);
-				ret = connect(sock_fd, gai_result->ai_addr,
-					      gai_result->ai_addrlen);
+				ret = connect(sock_fd, gai_result->ai_addr, gai_result->ai_addrlen); //å°è¯•å»å’Œgaiè§£æå‡ºæ¥çš„åœ°å€å»å»ºç«‹è¿æ¥
 				/* Wait for the connection */
-				if (ret == -1 && errno == EINPROGRESS) { //socketÕıÔÚ½¨Á¢¡£ÓÉÓÚÒì²½connectÎŞ·¨ÉèÖÃ³¬Ê±Ê±¼ä£¬ËùÒÔÒª½èÖúselect¡£ÎªËüÉèÖÃ³¬Ê±Ê±¼ä²¢ÇÒselectµÄ½á¹ûÀ´ÅĞ¶ÏÁ¬½ÓÊÇ·ñ³É¹¦½¨Á¢¡£
-														 //Èç¹ûselect·µ»ØÕıÖµÔòÍ¨¹ıgetsockoptÔÚSOL_SOCKET¼¶±ğÉÏ¶ÁÈ¡SO_ERRORÑ¡ÏîµÄÈ¡ÖµÀ´ÅĞ¶ÏÁ¬½ÓÊÇ·ñ³É¹¦¡£ Èç¹ûselect·µ»ØÁãÖµ»ò-1£¬Ôò·Ö±ğ±íÊ¾³¬Ê±»ò³ö´í¡£
-													  	 //Èç¹û·µ»Ø¸ºÖµ±íÊ¾socketÎ´½¨Á¢¡£ ²Î¿¼ http://developerweb.net/viewtopic.php?id=3196
+				if (ret == -1 && errno == EINPROGRESS) { //socketæ­£åœ¨å»ºç«‹ã€‚ç”±äºå¼‚æ­¥connectæ— æ³•è®¾ç½®è¶…æ—¶æ—¶é—´ï¼Œæ‰€ä»¥è¦å€ŸåŠ©selectã€‚ä¸ºå®ƒè®¾ç½®è¶…æ—¶æ—¶é—´å¹¶ä¸”selectçš„ç»“æœæ¥åˆ¤æ–­è¿æ¥æ˜¯å¦æˆåŠŸå»ºç«‹ã€‚
+														 //å¦‚æœselectè¿”å›æ­£å€¼åˆ™é€šè¿‡getsockoptåœ¨SOL_SOCKETçº§åˆ«ä¸Šè¯»å–SO_ERRORé€‰é¡¹çš„å–å€¼æ¥åˆ¤æ–­è¿æ¥æ˜¯å¦æˆåŠŸã€‚ å¦‚æœselectè¿”å›é›¶å€¼æˆ–-1ï¼Œåˆ™åˆ†åˆ«è¡¨ç¤ºè¶…æ—¶æˆ–å‡ºé”™ã€‚
+													  	 //å¦‚æœè¿”å›è´Ÿå€¼è¡¨ç¤ºsocketæœªå»ºç«‹ã€‚ å‚è€ƒ http://developerweb.net/viewtopic.php?id=3196
 					fd_set fdset;
 					FD_ZERO(&fdset);
 					FD_SET(sock_fd, &fdset);
-					ret = select(sock_fd + 1,
-						     NULL, &fdset, NULL,
-						     &tout);
+					ret = select(sock_fd + 1, NULL, &fdset, NULL, &tout);
 				}
 				if (ret == -1) {
 					close(sock_fd);
 					sock_fd = -1;
 					gai_result = gai_result->ai_next;
 				} else {
-					//Á¬½ÓÒÑ¾­½¨Á¢£¬ÖØĞÂÉèÖÃ»á×èÈûÄ£Ê½
+					//è¿æ¥å·²ç»å»ºç«‹ï¼Œé‡æ–°è®¾ç½®ä¼šé˜»å¡æ¨¡å¼
 					fcntl(sock_fd, F_SETFL, 0);
 				}
 			}
@@ -153,7 +142,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 		tcp_error(message, hostname, port, strerror(errno));
 		return -1;
 	}
-	//TODO Ñ§Ï°sslconnect
+	//TODO å­¦ä¹ sslconnect
 #ifdef HAVE_SSL
 	if (secure) {
 		tcp->ssl = ssl_connect(sock_fd, hostname, message);
@@ -167,7 +156,7 @@ tcp_connect(tcp_t *tcp, char *hostname, int port, int secure, char *local_if,
 
 	/* Set I/O timeout */
 	struct timeval tout = { .tv_sec  = io_timeout };
-	//¶ÔsocketÉèÖÃÊı¾İ·¢ËÍºÍÊı¾İ½ÓÊÕµÄ³¬Ê±Ê±¼ä¡£ÕâÁ©api½ö¶ÔÊı¾İÊÕ·¢µÄapiÉúĞ§¡£ÉèÖÃºóÈô³¬Ê±£¬·µ»ØEAGAIN»òÕßEWOULDBLOCK; 	https://blog.csdn.net/jasonliuvip/article/details/23567843
+	//å¯¹socketè®¾ç½®æ•°æ®å‘é€å’Œæ•°æ®æ¥æ”¶çš„è¶…æ—¶æ—¶é—´ã€‚è¿™ä¿©apiä»…å¯¹æ•°æ®æ”¶å‘çš„apiç”Ÿæ•ˆã€‚è®¾ç½®åè‹¥è¶…æ—¶ï¼Œè¿”å›EAGAINæˆ–è€…EWOULDBLOCK; 	https://blog.csdn.net/jasonliuvip/article/details/23567843
 	setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout));
 	setsockopt(sock_fd, SOL_SOCKET, SO_SNDTIMEO, &tout, sizeof(tout));
 
@@ -212,7 +201,7 @@ tcp_close(tcp_t *tcp)
 }
 
 int
-get_if_ip(char *iface, char *ip) //Í¨¹ıioctl api»ñÈ¡interface¶ÔÓ¦µÄipµØÖ·
+get_if_ip(char *iface, char *ip) //é€šè¿‡ioctl apiè·å–interfaceå¯¹åº”çš„ipåœ°å€
 {
 	struct ifreq ifr;
 	int ret, fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);

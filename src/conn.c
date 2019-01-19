@@ -48,7 +48,7 @@ char string[MAX_STRING];
 
 /**
  * Convert an URL to a conn_t structure.
- * ���conn�е������������,����Э�飬host���˿ڣ��˺������
+ * 填充conn中的链接相关配置,例如协议，host，端口，账号密码，dir，file等
  */
 int
 conn_set(conn_t *conn, const char *set_url)
@@ -173,9 +173,7 @@ conn_url(conn_t *conn)
 		sprintf(string + strlen(string), "%s:%s@",
 			conn->user, conn->pass);
 
-	sprintf(string + strlen(string), "%s:%i%s%s",
-		conn->host, conn->port, conn->dir, conn->file);
-
+	sprintf(string + strlen(string), "%s:%i%s%s", conn->host, conn->port, conn->dir, conn->file);
 	return string;
 }
 
@@ -191,19 +189,19 @@ conn_disconnect(conn_t *conn)
 	conn->enabled = false;
 }
 
-//����tcp����,����authen token
+//建立tcp链接,计算authen token
 int
 conn_init(conn_t *conn)
 {
 	char *proxy = conn->conf->http_proxy, *host = conn->conf->no_proxy;
 	int i;
 
-	if (*conn->conf->http_proxy == 0) { //proxy���ú�cmd������Ϊ��ʱ,
+	if (*conn->conf->http_proxy == 0) { //proxy配置和cmd中配置为空时,
 		proxy = NULL;
 	} else if (*conn->conf->no_proxy != 0) {
 		for (i = 0;; i++)
 			if (conn->conf->no_proxy[i] == 0) {
-				if (strstr(conn->host, host) != NULL) //�ж�host�Ƿ������no_proxy������
+				if (strstr(conn->host, host) != NULL) //判断host是否存在于no_proxy数组中
 					proxy = NULL;
 				host = &conn->conf->no_proxy[i + 1];
 				if (conn->conf->no_proxy[i + 1] == 0)
@@ -213,7 +211,7 @@ conn_init(conn_t *conn)
 
 	conn->proxy = proxy != NULL;
 
-	//����Э�����ͽ�����Ӧ������
+	//根据协议类型建立相应的链接
 	if (PROTO_IS_FTP(conn->proto) && !conn->proxy) {
 		conn->ftp->local_if = conn->local_if;
 		conn->ftp->ftp_mode = FTP_PASSIVE;
@@ -234,8 +232,8 @@ conn_init(conn_t *conn)
 		conn->http->local_if = conn->local_if;
 		conn->http->tcp.ai_family = conn->conf->ai_family;
 		if (!http_connect(conn->http, conn->proto, proxy, conn->host,
-				  conn->port, conn->user, conn->pass,
-				  conn->conf->io_timeout)) {
+				  conn->port, conn->user, conn->pass, conn->conf->io_timeout)) //在http_t结构中没有设置message属性，所以如果在创建http连接中失败的话，会吧errmsg赋值到http header中。
+		{
 			conn->message = conn->http->headers;
 			conn_disconnect(conn);
 			return 0;
@@ -246,7 +244,7 @@ conn_init(conn_t *conn)
 	return 1;
 }
 
-/* ����һЩ���ڿ����������ݵ�header */
+/* 加上一些用于控制请求内容的header */
 int
 conn_setup(conn_t *conn)
 {
@@ -273,18 +271,16 @@ conn_setup(conn_t *conn)
 		snprintf(s, sizeof(s), "%s%s", conn->dir, conn->file);
 		conn->http->firstbyte = conn->currentbyte;
 		conn->http->lastbyte = conn->lastbyte;
-		http_get(conn->http, s); //���ϻ�ȡ����Դ��,��Դ����,��֤token��header
-		http_addheader(conn->http, "User-Agent: %s",
-			       conn->conf->user_agent);
+		http_get(conn->http, s); //加上获取的资源名,资源长度,认证token等header
+		http_addheader(conn->http, "User-Agent: %s", conn->conf->user_agent);
 		for (i = 0; i < conn->conf->add_header_count; i++)
-			http_addheader(conn->http, "%s",
-				       conn->conf->add_header[i]);
+			http_addheader(conn->http, "%s", conn->conf->add_header[i]);
 	}
 	return 1;
 }
 
 int
-conn_exec(conn_t *conn)
+conn_exec(conn_t *conn) //发送请求并接收resp header，同时文件指针已经指向body的开始地址了。
 {
 	if (PROTO_IS_FTP(conn->proto) && !conn->proxy) {
 		if (!ftp_command(conn->ftp, "RETR %s", conn->file))
@@ -334,8 +330,8 @@ conn_info(conn_t *conn)
 			conn->currentbyte = 1;
 			if (!conn_setup(conn))
 				return 0;
-			conn_exec(conn);
-			conn_disconnect(conn);
+			conn_exec(conn); //发送请求并且获取header
+			conn_disconnect(conn); //取完header以后断开连接
 
 			http_filename(conn->http, conn->output_filename);
 
@@ -346,13 +342,10 @@ conn_info(conn_t *conn)
 				return 0;
 			sscanf(t, "%1000s", s);
 			if (s[0] == '/') {
-				sprintf(conn->http->headers, "%s%s:%i%s",
-					scheme_from_proto(conn->proto),
-					conn->host, conn->port, s);
+				sprintf(conn->http->headers, "%s%s:%i%s", scheme_from_proto(conn->proto), conn->host, conn->port, s);
 				strncpy(s, conn->http->headers, sizeof(s) - 1);
 			} else if (strstr(s, "://") == NULL) {
-				sprintf(conn->http->headers, "%s%s",
-					conn_url(conn), s);
+				sprintf(conn->http->headers, "%s%s", conn_url(conn), s);
 				strncpy(s, conn->http->headers, sizeof(s) - 1);
 			}
 			s[sizeof(s) - 1] = '\0';
@@ -363,18 +356,15 @@ conn_info(conn_t *conn)
 			if (PROTO_IS_FTP(conn->proto) && !conn->proxy) {
 				return -1;
 			}
-
 			i++;
-		}
-		while (conn->http->status / 100 == 3 &&
-		       i < conn->conf->max_redirect);
+		} while (conn->http->status / 100 == 3 && i < conn->conf->max_redirect); //如果http请求返回302的话,则会在max_redirect限制跳转范围内去尝试访问需要跳转的链接。
 
 		if (i == conn->conf->max_redirect) {
 			sprintf(conn->message, _("Too many redirects.\n"));
 			return 0;
 		}
 
-		conn->size = http_size(conn->http);
+		conn->size = http_size(conn->http); //从resp header中取出content-length
 		i = http_size_from_range(conn->http);
 		if (i > 0 && conn->size + 1 != i) {
 			/* This means that the server has a bug. This version currently
@@ -394,13 +384,12 @@ conn_info(conn_t *conn)
 			/* if we have an invalid size, set it to the max so that
 			 * the transfer will finish when the server closes the
 			 * connection. Otherwise keep the reported size. */
-			if (conn->size <= 0)
+			if (conn->size <= 0) //如果获取不到size的话就默认设置一个很大的值，这种情况下等服务端断开连接时就表示下载完成了。
 				conn->size = LLONG_MAX;
 		} else {
 			char *t = strchr(conn->message, '\n');
 			if (t == NULL)
-				sprintf(conn->message,
-					_("Unknown HTTP error.\n"));
+				sprintf(conn->message, _("Unknown HTTP error.\n"));
 			else
 				*t = 0;
 			return 0;

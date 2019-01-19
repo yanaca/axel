@@ -85,6 +85,7 @@ http_auth_token(char *token, const char *user, const char *pass)
 	}
 }
 
+//å»ºç«‹tcpè¿æ¥ç”Ÿæˆauthenkey
 int
 http_connect(http_t *conn, int proto, char *proxy, char *host, int port,
 	     char *user, char *pass, unsigned io_timeout)
@@ -96,7 +97,7 @@ http_connect(http_t *conn, int proto, char *proxy, char *host, int port,
 	conn->port = port;
 	conn->proto = proto;
 
-	if (proxy != NULL) { //Èç¹ûÉèÖÃÁËproxyµÄ»°£¬¸²¸ÇÁ¬½Ó½¨Á¢Ïà¹ØµÄ±äÁ¿¡£
+	if (proxy != NULL) { //å¦‚æœè®¾ç½®äº†proxyçš„è¯ï¼Œè¦†ç›–è¿æ¥å»ºç«‹ç›¸å…³çš„å˜é‡ã€‚
 		if (*proxy != 0) {
 			sprintf(conn->host, "%s:%i", host, port);
 			if (!conn_set(tconn, proxy)) {
@@ -116,7 +117,7 @@ http_connect(http_t *conn, int proto, char *proxy, char *host, int port,
 		}
 	}
 
-	//½¨Á¢tcpÁ´½Ó,fd±£´æÔÚconn->tcpÀïÃæ
+	//å»ºç«‹tcpé“¾æ¥,fdä¿å­˜åœ¨conn->tcpé‡Œé¢
 	if (tcp_connect(&conn->tcp, host, port, PROTO_IS_SECURE(proto),
 			conn->local_if, conn->headers, io_timeout) == -1)
 		return 0;
@@ -130,6 +131,7 @@ http_connect(http_t *conn, int proto, char *proxy, char *host, int port,
 	if (!conn->proxy || !puser || *puser == 0) {
 		*conn->proxy_auth = 0;
 	} else {
+		//base64åŠ å¯†ã€‚ã€‚ç»†çœ‹é€»è¾‘ï¼Ÿ
 		http_auth_token(conn->proxy_auth, puser, ppass);
 	}
 
@@ -142,14 +144,14 @@ http_disconnect(http_t *conn)
 	tcp_close(&conn->tcp);
 }
 
+//å¾€httpè¯·æ±‚å¤´éƒ¨æ·»åŠ ä¸€äº›å…³é”®headerï¼Œä¾‹å¦‚GETï¼ŒHOSTï¼ŒRangeï¼ŒAuthorizationç­‰
 void
-http_get(http_t *conn, char *lurl)
+http_get(http_t *conn, char *lurl) //lurl = dir + file
 {
 	*conn->request = 0;
 	if (conn->proxy) {
 		const char *proto = scheme_from_proto(conn->proto);
-		http_addheader(conn, "GET %s%s%s HTTP/1.0", proto, conn->host,
-			       lurl);
+		http_addheader(conn, "GET %s%s%s HTTP/1.0", proto, conn->host, lurl);
 	} else {
 		http_addheader(conn, "GET %s HTTP/1.0", lurl);
 		if ((conn->proto == PROTO_HTTP &&
@@ -164,16 +166,13 @@ http_get(http_t *conn, char *lurl)
 	if (*conn->auth)
 		http_addheader(conn, "Authorization: Basic %s", conn->auth);
 	if (*conn->proxy_auth)
-		http_addheader(conn, "Proxy-Authorization: Basic %s",
-			       conn->proxy_auth);
+		http_addheader(conn, "Proxy-Authorization: Basic %s", conn->proxy_auth);
 	http_addheader(conn, "Accept: */*");
 	if (conn->firstbyte) {
 		if (conn->lastbyte)
-			http_addheader(conn, "Range: bytes=%lld-%lld",
-				       conn->firstbyte, conn->lastbyte);
+			http_addheader(conn, "Range: bytes=%lld-%lld", conn->firstbyte, conn->lastbyte);
 		else
-			http_addheader(conn, "Range: bytes=%lld-",
-				       conn->firstbyte);
+			http_addheader(conn, "Range: bytes=%lld-", conn->firstbyte);
 	}
 }
 
@@ -191,6 +190,7 @@ http_addheader(http_t *conn, char *format, ...)
 	strncat(conn->request, s, MAX_QUERY - strlen(conn->request) - 1);
 }
 
+//å‘é€httpè¯·æ±‚å’Œæ¥æ”¶httpè¿”å›
 int
 http_exec(http_t *conn)
 {
@@ -199,29 +199,23 @@ http_exec(http_t *conn)
 	char s[2] = {0}, *s2;
 
 #ifdef DEBUG
-	fprintf(stderr, "--- Sending request ---\n%s--- End of request ---\n",
-		conn->request);
+	fprintf(stderr, "--- Sending request ---\n%s--- End of request ---\n", conn->request);
 #endif
 
 	http_addheader(conn, "");
-
 	while (nwrite < strlen(conn->request)) {
-		if ((i =
-		     tcp_write(&conn->tcp, conn->request + nwrite,
-			       strlen(conn->request) - nwrite)) < 0) {
+		if ((i = tcp_write(&conn->tcp, conn->request + nwrite, strlen(conn->request) - nwrite)) < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
 			/* We'll put the message in conn->headers, not in request */
-			sprintf(conn->headers,
-				_("Connection gone while writing.\n"));
+			sprintf(conn->headers, _("Connection gone while writing.\n"));
 			return 0;
 		}
 		nwrite += i;
 	}
 
 	*conn->headers = 0;
-	/* Read the headers byte by byte to make sure we don't touch the
-	   actual data */
+	/* Read the headers byte by byte to make sure we don't touch the actual data */
 	while (1) {
 		if (tcp_read(&conn->tcp, s, 1) <= 0) {
 			/* We'll put the message in conn->headers, not in request */
@@ -231,15 +225,14 @@ http_exec(http_t *conn)
 
 		if (*s == '\r') {
 			continue;
-		} else if (*s == '\n') {
+		} else if (*s == '\n') { //ä¸¤ä¸ª\r\n\r\næ˜¯httpå¤´éƒ¨å’Œbodyçš„åˆ†éš”ç¬¦ï¼Œå¯ä»¥ç†è§£ä¸ºheaderå’Œbodyä¹‹é—´æœ‰ä¸¤ä¸ªç©ºè¡Œã€‚åœ¨è¿™é‡Œåªè¯»headerï¼›è¯»å®Œä»¥åè¿™é‡Œæ–‡ä»¶æŒ‡é’ˆå·²ç»æŒ‡åˆ°bodyçš„å¼€å§‹åœ°å€äº†ã€‚
 			if (i == 0)
 				break;
 			i = 0;
 		} else {
 			i++;
 		}
-		strncat(conn->headers, s,
-			MAX_QUERY - strlen(conn->headers) - 1);
+		strncat(conn->headers, s, MAX_QUERY - strlen(conn->headers) - 1);
 	}
 
 #ifdef DEBUG
@@ -269,13 +262,12 @@ http_header(const http_t *conn, const char *header)
 			p++;
 		if (*p == '\n')
 			p++;
-	}
-	while (*p);
+	} while (*p);
 
 	return NULL;
 }
 
-//ÓÃÀ´Ö¸Ã÷·¢ËÍ¸ø½ÓÊÕ·½µÄÏûÏ¢Ö÷ÌåµÄ´óĞ¡
+//ç”¨æ¥æŒ‡æ˜å‘é€ç»™æ¥æ”¶æ–¹çš„æ¶ˆæ¯ä¸»ä½“çš„å¤§å°
 long long int
 http_size(http_t *conn)
 {
@@ -289,8 +281,8 @@ http_size(http_t *conn)
 	return j;
 }
 
-//Content-Range: bytes 200-1000/67589  http resp headerÖĞContent-Range±íÊ¾·µ»ØµÄÊı¾İ°üÔÚÕû¸öÎÄ¼şÖĞµÄÎ»ÖÃ. start=200, end=1000, ÎÄ¼ş×Ü´óĞ¡67589
-//´Óresp headerÖĞ»ñÈ¡ÎÄ¼ş×Ü´óĞ¡
+//Content-Range: bytes 200-1000/67589  http resp headerä¸­Content-Rangeè¡¨ç¤ºè¿”å›çš„æ•°æ®åŒ…åœ¨æ•´ä¸ªæ–‡ä»¶ä¸­çš„ä½ç½®. start=200, end=1000, æ–‡ä»¶æ€»å¤§å°67589
+//ä»resp headerä¸­è·å–æ–‡ä»¶æ€»å¤§å°
 long long int
 http_size_from_range(http_t *conn)
 {
@@ -310,14 +302,13 @@ http_size_from_range(http_t *conn)
 	return j;
 }
 
-//´Óhttp resp header  Content-Disposition ÖĞÈ¡³ö ÎÄ¼şÃû // https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Content-Disposition
+//ä»http resp header  Content-Disposition ä¸­å–å‡º æ–‡ä»¶å // https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Content-Disposition
 void
 http_filename(const http_t *conn, char *filename)
 {
 	const char *h;
 	if ((h = http_header(conn, "Content-Disposition:")) != NULL) {
-		sscanf(h, "%*s%*[ \t]filename%*[ \t=\"\'-]%254[^\n\"\' ]",
-		       filename);
+		sscanf(h, "%*s%*[ \t]filename%*[ \t=\"\'-]%254[^\n\"\' ]", filename);
 
 		/* Replace common invalid characters in filename
 		   https://en.wikipedia.org/wiki/Filename#Reserved_characters_and_words */

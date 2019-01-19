@@ -71,42 +71,42 @@
 #define PROTO_DEFAULT_PORT     PROTO_HTTP_PORT
 
 typedef struct {
-	conf_t *conf;	//���ӵ�����,һ������ֻ��һ������
+	conf_t *conf;	//连接的配置,一个连接只有一个配置
 
-	int proto;		//Э������
-	int port;		//�˿�
-	int proxy;		//�Ƿ�ʹ�ô���
+	int proto;		//协议类型
+	int port;		//端口
+	int proxy;		//是否使用代理
 	//whole url is ->  proto://host:port@user:pass/dir/file?querystring
-	char host[MAX_STRING]; 	//host
-	char dir[MAX_STRING];	//uri
-	char file[MAX_STRING];	//�ļ���
-	char user[MAX_STRING];	//�û���
-	char pass[MAX_STRING];	//����
-	char output_filename[MAX_STRING]; //����ļ�
+	char host[MAX_STRING]; 	//链接中的host
+	char dir[MAX_STRING];	//链接中的uri
+	char file[MAX_STRING];	//链接中的文件名
+	char user[MAX_STRING];	//链接中的用户名
+	char pass[MAX_STRING];	//链接中的密码
+	char output_filename[MAX_STRING]; //下载到本地文件的文件名称
 
-	ftp_t ftp[1];	//ftp������Ϣ
-	http_t http[1];	//tcp������Ϣ
+	ftp_t ftp[1];	//ftp连接信息
+	http_t http[1];	//tcp连接信息
 	long long int size;	/* File size, not 'connection size'.. */
-	long long int currentbyte;
-	long long int lastbyte;
-	tcp_t *tcp; //tcp������Ϣ
-	bool enabled;
-	bool supported; //������Ƿ�֧�ֶ��������أ����http resp�а���"Content-Range:��֧��
-	int last_transfer;
+	long long int currentbyte; //当前下载到第几个字节
+	long long int lastbyte; //当前连接负责下载的最后一个字节,由于是分段下载的所以有firstByte和lastByte
+	tcp_t *tcp; //tcp连接信息
+	bool enabled; //连接的socket是都可以被读,只有在http_exec完成以后会被置为true。 在未请求到数据或者conn被关闭的时候都会被置为false
+	bool supported; //服务端是否支持多链接下载，如果http resp中包含"Content-Range:即支持
+	int last_transfer; //上次变更的时间;在setup_conn和conn_exec的时候都会更新这个时间
 	char *message;
-	char *local_if;
+	char *local_if; //conf.interface.text (本地网卡)
 
-	bool state;
-	pthread_t setup_thread[1];
-	pthread_mutex_t lock;
+	bool state; //true:setup_thread还未执行完毕； false：setup_thread执行正常执行完毕。
+	pthread_t setup_thread[1]; //每个连接的线程id
+	pthread_mutex_t lock; //线程锁
 } conn_t;
 
 int conn_set(conn_t *conn, const char *set_url);
 char *conn_url(conn_t *conn);
 void conn_disconnect(conn_t *conn);
 int conn_init(conn_t *conn);
-int conn_setup(conn_t *conn);
-int conn_exec(conn_t *conn);
+int conn_setup(conn_t *conn); //主要是添加一些控制请求的header,例如Host，Range等
+int conn_exec(conn_t *conn); //调用http_exec执行http调用
 int conn_info(conn_t *conn);
 const char *scheme_from_proto(int proto);
 

@@ -85,7 +85,7 @@ parse_protocol(conf_t *conf, const char *value)
 	return 1;
 }
 
-//½âÎöÅäÖÃÎÄ¼ş£¬¸³Öµ¸øconf_t
+//è§£æé…ç½®æ–‡ä»¶ï¼Œèµ‹å€¼ç»™conf_t
 int
 conf_loadfile(conf_t *conf, char *file)
 {
@@ -105,10 +105,10 @@ conf_loadfile(conf_t *conf, char *file)
 
 		*s = 0;
 
-		//¶ÁÈ¡100×Ö·û,¹ıÂË¿ÕĞĞºÍ×¢ÊÍµÄĞĞ(#´òÍ·)
+		//è¯»å–100å­—ç¬¦,è¿‡æ»¤ç©ºè¡Œå’Œæ³¨é‡Šçš„è¡Œ(#æ‰“å¤´)
 		if (!(ret = axel_fscanf(fp, "%100[^\n#]s", s)))
 			break;
-		//¹ıÂË¿ÕĞĞ
+		//è¿‡æ»¤ç©ºè¡Œ
 		if (!(ret = axel_fscanf(fp, "%*[^\n]s")))
 			break;
 		//
@@ -324,7 +324,7 @@ parse_interfaces(conf_t *conf, char *s)
 			s++;
 		for (s2 = s; *s2 != ' ' && *s2 != '\t' && *s2; s2++) ;
 		*s2 = 0;
-		if (*s < '0' || *s > '9') //TODO Íø¿¨²»»áÒÔÊı×Ö¿ªÍ·Âğ???
+		if (*s < '0' || *s > '9') //TODO ç½‘å¡ä¸ä¼šä»¥æ•°å­—å¼€å¤´å—???
 			get_if_ip(s, iface->text);
 		else
 			strcpy(iface->text, s);
